@@ -6,6 +6,7 @@ import type { AppConfig } from "../config/types.js";
 import type { BinarySession } from "../application/binary/BinarySession.js";
 import { HopperProvider } from "../hopper/HopperProvider.js";
 import { GhidraProvider } from "../ghidra/GhidraProvider.js";
+import { CutterProvider } from "../cutter/CutterProvider.js";
 import { IdaProvider } from "../ida/IdaProvider.js";
 import { KunaProvider } from "../kuna/KunaProvider.js";
 import type { Logger } from "pino";
@@ -63,6 +64,7 @@ const composeDeepBinarySession = (
   const hopper = new HopperProvider(config, logger, environment);
   const ghidra = new GhidraProvider(config, logger, environment);
   const ida = new IdaProvider(config, environment);
+  const cutter = new CutterProvider(config, environment);
   const kuna = new KunaProvider(environment, {
     regexMatchingDeadline: config.regexMatchingDeadline,
     regexWorkerHeapRequest: config.regexWorkerHeapRequest,
@@ -81,7 +83,7 @@ const composeDeepBinarySession = (
     );
   return composeBinarySession(
     new AnalysisProviderRegistry(
-      [hopper, ghidra, ida, kuna],
+      [hopper, ghidra, ida, cutter, kuna],
       config.analysisProvider,
       nativeInspectionAvailable ? isAppleDispatchMetadataTarget : undefined,
     ),

@@ -3,6 +3,7 @@ export const DOCTOR_PROVIDER_IDS = [
   "hopper",
   "ghidra",
   "ida",
+  "cutter",
   "jadx",
   "kuna",
 ] as const;

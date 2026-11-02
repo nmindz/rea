@@ -581,3 +581,23 @@ describe("Ghidra decompile limit configuration", () => {
     },
   );
 });
+
+describe("Cutter registration setting", () => {
+  it("parses the Cutter registration path as an absolute setting", () => {
+    expect(
+      parseConfig({
+        REA_ANALYSIS_PROVIDER: "cutter",
+        REA_CUTTER_MCP_CONFIG: "/tmp/cutter-mcp.json",
+      }),
+    ).toMatchObject({
+      ok: true,
+      value: {
+        analysisProvider: "cutter",
+        cutterMcpConfigPath: "/tmp/cutter-mcp.json",
+      },
+    });
+    expect(parseConfig({ REA_CUTTER_MCP_CONFIG: "relative.json" }).ok).toBe(
+      false,
+    );
+  });
+});

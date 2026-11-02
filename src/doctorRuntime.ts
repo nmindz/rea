@@ -6,11 +6,14 @@ import {
 import { fileURLToPath } from "node:url";
 import { inspectJadxProvider } from "./android/JadxDoctor.js";
 import { inspectSystemGhidraProvider } from "./ghidra/GhidraDoctor.js";
+import { inspectCutterRegistration } from "./cutter/CutterDoctor.js";
+import { readCutterConfiguration } from "./cutter/CutterConfiguration.js";
 import { inspectIdaRegistration } from "./ida/IdaDoctor.js";
 import { inspectKunaProvider } from "./kuna/KunaDoctor.js";
 import { readIdaConfiguration } from "./ida/IdaConfiguration.js";
 import { selectLinuxPrivateDisplayStrategy } from "./hopper/LinuxPrivateDisplayProbe.js";
-import { ok } from "./domain/result.js";
+import { ok, type Result } from "./domain/result.js";
+import type { ConfigurationError } from "./domain/configurationErrors.js";
 import { AnalysisCancelledError } from "./domain/analysisErrorCore.js";
 import { ProviderCleanupError } from "./domain/providerCleanupError.js";
 import { AnalysisCleanupLeaseGroup } from "./artifacts/AnalysisCleanupLease.js";
@@ -20,35 +23,48 @@ import {
   linuxHopperPythonUnavailable,
 } from "./application/LinuxHopperPython.js";
 
+/** Share one registration read per path within a retained resource scope. */
+const cachedRegistrationRead = <Configuration>(
+  read: (
+    path: string,
+    options: {
+      readonly signal: AbortSignal;
+      readonly resourceScope: RetainedResourceScope;
+    },
+  ) => Promise<Result<Configuration, ConfigurationError>>,
+) => {
+  const reads = new WeakMap<
+    RetainedResourceScope,
+    Map<string, Promise<Result<Configuration, ConfigurationError>>>
+  >();
+  return (
+    path: string,
+    resourceScope: RetainedResourceScope,
+    inspectionSignal: AbortSignal,
+  ) => {
+    let byPath = reads.get(resourceScope);
+    if (byPath === undefined) {
+      byPath = new Map();
+      reads.set(resourceScope, byPath);
+    }
+    let registration = byPath.get(path);
+    if (registration === undefined) {
+      registration = read(path, { resourceScope, signal: inspectionSignal });
+      byPath.set(path, registration);
+    }
+    return registration;
+  };
+};
+
 /** Compose provider diagnostics at the outer CLI adapter boundary. */
 export const createSystemDoctorHost = (
   environment: Readonly<NodeJS.ProcessEnv> = process.env,
   signal?: AbortSignal,
 ): DoctorHost => {
-  const registrationReads = new WeakMap<
-    RetainedResourceScope,
-    Map<string, ReturnType<typeof readIdaConfiguration>>
-  >();
-  const readRegistration = (
-    path: string,
-    resourceScope: RetainedResourceScope,
-    inspectionSignal: AbortSignal,
-  ) => {
-    let byPath = registrationReads.get(resourceScope);
-    if (byPath === undefined) {
-      byPath = new Map();
-      registrationReads.set(resourceScope, byPath);
-    }
-    let registration = byPath.get(path);
-    if (registration === undefined) {
-      registration = readIdaConfiguration(path, {
-        resourceScope,
-        signal: inspectionSignal,
-      });
-      byPath.set(path, registration);
-    }
-    return registration;
-  };
+  const readIdaRegistration = cachedRegistrationRead(readIdaConfiguration);
+  const readCutterRegistration = cachedRegistrationRead(
+    readCutterConfiguration,
+  );
   return systemDoctorHost({
     environment,
     ...(signal === undefined ? {} : { signal }),
@@ -58,20 +74,23 @@ export const createSystemDoctorHost = (
       resourceScope,
       inspectionSignal,
     ) => {
-      if (analysisProvider !== "ida" && analysisProvider !== "auto")
-        return ok(undefined);
-      const path = registrationEnvironment.REA_IDA_MCP_CONFIG;
-      if (path === undefined) return ok(undefined);
-      const registration = await readRegistration(
-        path,
-        resourceScope,
-        inspectionSignal,
-      );
-      if (registration.ok) return ok(registration.value.timeoutMs);
-      // An invalid IDA registration cannot be selected automatically. Keep it
-      // out of recommendations for another available provider, but surface the
-      // parser-owned error when IDA itself was explicitly selected.
-      return analysisProvider === "ida" ? registration : ok(undefined);
+      const budgets: number[] = [];
+      for (const [kind, setting, read] of [
+        ["ida", "REA_IDA_MCP_CONFIG", readIdaRegistration],
+        ["cutter", "REA_CUTTER_MCP_CONFIG", readCutterRegistration],
+      ] as const) {
+        if (analysisProvider !== kind && analysisProvider !== "auto") continue;
+        const path = registrationEnvironment[setting];
+        if (path === undefined) continue;
+        const registration = await read(path, resourceScope, inspectionSignal);
+        if (registration.ok) budgets.push(registration.value.timeoutMs);
+        // An invalid registration cannot be selected automatically. Keep it
+        // out of recommendations for another available provider, but surface
+        // the parser-owned error when that provider itself was explicitly
+        // selected.
+        else if (analysisProvider === kind) return registration;
+      }
+      return ok(budgets.length === 0 ? undefined : Math.max(...budgets));
     },
     providerInspections: async (resourceScope, inspectionSignal) => [
       await inspectSystemGhidraProvider(
@@ -85,8 +104,20 @@ export const createSystemDoctorHost = (
         inspectionSignal,
         environment.REA_IDA_MCP_CONFIG === undefined
           ? undefined
-          : readRegistration(
+          : readIdaRegistration(
               environment.REA_IDA_MCP_CONFIG,
+              resourceScope,
+              inspectionSignal,
+            ),
+      ),
+      await inspectCutterRegistration(
+        environment.REA_CUTTER_MCP_CONFIG,
+        resourceScope,
+        inspectionSignal,
+        environment.REA_CUTTER_MCP_CONFIG === undefined
+          ? undefined
+          : readCutterRegistration(
+              environment.REA_CUTTER_MCP_CONFIG,
               resourceScope,
               inspectionSignal,
             ),

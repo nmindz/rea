@@ -19,6 +19,10 @@ import {
   PLAYWRIGHT_ELECTRON_ACTIVE_PROVIDER_IDENTITY,
 } from "../browser/providerIdentities.js";
 import { TSHARK_PROVIDER_IDENTITY } from "../captures/TsharkProviderIdentity.js";
+import {
+  CUTTER_ANALYSIS_OPERATIONS,
+  CUTTER_ANALYSIS_PROVIDER_IDENTITY,
+} from "../cutter/CutterProviderMetadata.js";
 import { CUTTER_PROVIDER_IDENTITY } from "../cutter/CutterProviderIdentity.js";
 import {
   ANALYSIS_VIEW_PROVIDER,
@@ -217,6 +221,14 @@ export const CAPABILITY_DECLARATIONS = {
       providerBinding(CUTTER_PROVIDER_IDENTITY, {
         group: "CUTTER_TOOL_CONTRACTS",
       }),
+    ],
+  },
+  cutterAnalysis: {
+    providers: [
+      providerBinding(
+        CUTTER_ANALYSIS_PROVIDER_IDENTITY,
+        CUTTER_ANALYSIS_OPERATIONS,
+      ),
     ],
   },
   desktopApplication: {

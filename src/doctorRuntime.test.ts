@@ -486,6 +486,71 @@ it("shares one parsed IDA registration between timeout-budget and doctor project
   }
 });
 
+it("keeps Cutter and IDA registrations separate and uses the longer request budget for auto", async () => {
+  expect(DOCTOR_PROVIDER_IDS).toContain("cutter");
+  const root = await createTestTempDirectory("rea-cutter-registration-fact-");
+  const cutter = join(root, "cutter.json");
+  const ida = join(root, "ida.json");
+  await writeFile(
+    cutter,
+    JSON.stringify({ command: "fixture", timeoutMs: 4321 }),
+  );
+  await writeFile(ida, JSON.stringify({ command: "fixture", timeoutMs: 1234 }));
+  const environment = {
+    REA_CUTTER_MCP_CONFIG: cutter,
+    REA_IDA_MCP_CONFIG: ida,
+  };
+  const host = createSystemDoctorHost(environment);
+  try {
+    expect(
+      await host.resolveProviderRequestBudget?.("cutter", environment),
+    ).toEqual(ok(4321));
+    expect(
+      await host.resolveProviderRequestBudget?.("ida", environment),
+    ).toEqual(ok(1234));
+    expect(
+      await host.resolveProviderRequestBudget?.("auto", environment),
+    ).toEqual(ok(4321));
+    expect(
+      await host.resolveProviderRequestBudget?.("ghidra", environment),
+    ).toEqual(ok(undefined));
+    await writeFile(cutter, "not JSON anymore");
+    // The parsed registration is shared, so a later edit does not change this report.
+    const inspections = await host.providerInspections?.();
+    expect(inspections?.find(({ id }) => id === "cutter")).toMatchObject({
+      configured: true,
+      available: true,
+      registrationEnvironment: { REA_CUTTER_MCP_CONFIG: cutter },
+    });
+    expect(inspections?.find(({ id }) => id === "ida")).toMatchObject({
+      configured: true,
+      available: true,
+    });
+  } finally {
+    await host.close?.();
+  }
+});
+
+it("surfaces an invalid Cutter registration only when Cutter itself was selected", async () => {
+  const root = await createTestTempDirectory(
+    "rea-cutter-invalid-registration-",
+  );
+  const cutter = join(root, "cutter.json");
+  await writeFile(cutter, JSON.stringify({ url: "http://127.0.0.1:1/" }));
+  const environment = { REA_CUTTER_MCP_CONFIG: cutter };
+  const host = createSystemDoctorHost(environment);
+  try {
+    expect(
+      (await host.resolveProviderRequestBudget?.("cutter", environment))?.ok,
+    ).toBe(false);
+    expect(
+      await host.resolveProviderRequestBudget?.("auto", environment),
+    ).toEqual(ok(undefined));
+  } finally {
+    await host.close?.();
+  }
+});
+
 it("carries a validated REA_KUNA_COMMAND into the provider registration environment", async () => {
   expect(DOCTOR_PROVIDER_IDS).toContain("kuna");
   const root = await createTestTempDirectory("rea-kuna-registration-");
