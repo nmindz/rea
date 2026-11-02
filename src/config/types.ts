@@ -23,6 +23,7 @@ export interface AppConfig {
   readonly mcpToolCatalogProfile?: McpToolCatalogProfile;
   readonly analysisProvider: AnalysisProviderSelector;
   readonly idaMcpConfigPath?: string;
+  readonly cutterMcpConfigPath?: string;
   readonly ghidraInstallDir: string | undefined;
   readonly ghidraJavaHome: string | undefined;
   readonly ghidraStartupTimeoutMs: number;

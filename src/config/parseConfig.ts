@@ -132,6 +132,9 @@ export const parseConfig = (
     ...(env.REA_IDA_MCP_CONFIG === undefined
       ? {}
       : { idaMcpConfigPath: env.REA_IDA_MCP_CONFIG }),
+    ...(env.REA_CUTTER_MCP_CONFIG === undefined
+      ? {}
+      : { cutterMcpConfigPath: env.REA_CUTTER_MCP_CONFIG }),
     ...(env.REA_GHIDRA_PROJECT_PATH === undefined
       ? {}
       : {

@@ -48,6 +48,7 @@
   "src/config/bridgeMaxRequestBytes.ts": 3,
   "src/config/capturePacketJsonExpansion.ts": 1,
   "src/cutter/CutterBridgeClient.ts": 1,
+  "src/cutter/CutterMcpConnection.ts": 1,
   "src/desktop/AgentEnvComputer.ts": 1,
   "src/desktop/BuildComputerController.ts": 2,
   "src/domain/analysisView/WebNetworkProjectionAccumulator.ts": 1,

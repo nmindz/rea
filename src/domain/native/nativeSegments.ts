@@ -18,7 +18,7 @@ export interface SegmentSummary {
 
 const availableMemoryPermissions = z.object({
   available: z.literal(true),
-  source: z.literal("ghidra-memory-block"),
+  source: z.enum(["ghidra-memory-block", "cutter-section-table"]),
 });
 
 /** One reported memory region with its permission availability and provenance. */
@@ -33,7 +33,11 @@ const nativeMemoryRegionSchema = z.object({
     z.object({ available: z.literal(false), reason: z.string() }),
     availableMemoryPermissions,
   ]),
-  provenance: z.enum(["hopper-public-python-api", "ghidra-memory-block"]),
+  provenance: z.enum([
+    "hopper-public-python-api",
+    "ghidra-memory-block",
+    "cutter-section-table",
+  ]),
   address_space: z.string().optional(),
   image_base: z.string().optional(),
   initialized: z.boolean().optional(),

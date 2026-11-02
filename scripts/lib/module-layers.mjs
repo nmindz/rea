@@ -269,7 +269,11 @@ export const ENTRY_FILES = Object.freeze(
       cutter: [
         "CutterBridgeClient.ts",
         "CutterBridgeService.ts",
+        "CutterConfiguration.ts",
+        "CutterDoctor.ts",
+        "CutterProvider.ts",
         "CutterProviderIdentity.ts",
+        "CutterProviderMetadata.ts",
       ],
       desktop: [
         "AgentEnvComputer.ts",

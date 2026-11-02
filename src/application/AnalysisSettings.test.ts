@@ -199,6 +199,16 @@ it("exposes shared provider controls and preserves the explicit unbounded decomp
   ).toEqual(["regex.matching_deadline_ms", "regex.worker_heap_request_mib"]);
   expect(
     store
+      .inspect({ provider: "cutter", operation: "search_strings" })
+      .settings.map(({ setting }) => setting),
+  ).toEqual(
+    expect.arrayContaining([
+      "regex.matching_deadline_ms",
+      "regex.worker_heap_request_mib",
+    ]),
+  );
+  expect(
+    store
       .inspect({ operation: "inventory_artifact" })
       .settings.map(({ setting }) => setting),
   ).toEqual([

@@ -22,9 +22,15 @@ import {
   KUNA_DOCTOR_SETTINGS,
   inspectKunaProvider,
 } from "./kuna/KunaDoctor.js";
+import {
+  CUTTER_DOCTOR_SETTINGS,
+  inspectCutterRegistration,
+} from "./cutter/CutterDoctor.js";
+import { readCutterConfiguration } from "./cutter/CutterConfiguration.js";
 import { readIdaConfiguration } from "./ida/IdaConfiguration.js";
 import { selectLinuxPrivateDisplayStrategy } from "./hopper/LinuxPrivateDisplayProbe.js";
-import { ok } from "./domain/result.js";
+import { ok, type Result } from "./domain/result.js";
+import type { ConfigurationError } from "./domain/configurationErrors.js";
 import { cancelledBy, carriedReason } from "./domain/analysisErrorCore.js";
 import { ProviderCleanupError } from "./domain/providerCleanupError.js";
 import {
@@ -182,6 +188,7 @@ const readSelectedRegistration = async (
 const PROVIDER_SETTINGS: Readonly<Record<string, readonly string[]>> = {
   ghidra: GHIDRA_DOCTOR_SETTINGS,
   ida: IDA_DOCTOR_SETTINGS,
+  cutter: CUTTER_DOCTOR_SETTINGS,
   jadx: JADX_DOCTOR_SETTINGS,
   kuna: KUNA_DOCTOR_SETTINGS,
 };
@@ -258,6 +265,7 @@ const unresolvedProvider = (
   const configurationKeys: Readonly<Record<string, string>> = {
     ghidra: "GHIDRA_INSTALL_DIR",
     ida: "REA_IDA_MCP_CONFIG",
+    cutter: "REA_CUTTER_MCP_CONFIG",
     jadx: "REA_JADX_MCP_JAR",
     kuna: "REA_KUNA_COMMAND",
   };
@@ -320,6 +328,41 @@ const withProbeResourceScope = <T>(
     }
   });
 
+/** Share one registration read per path within a retained resource scope. */
+const cachedRegistrationRead = <Configuration>(
+  read: (
+    path: string,
+    options: {
+      readonly signal: AbortSignal;
+      readonly resourceScope: RetainedResourceScope;
+    },
+  ) => Promise<Result<Configuration, ConfigurationError>>,
+) => {
+  const reads = new WeakMap<
+    RetainedResourceScope,
+    Map<string, Promise<Result<Configuration, ConfigurationError>>>
+  >();
+  return (
+    path: string,
+    resourceScope: RetainedResourceScope,
+    inspectionSignal: AbortSignal,
+  ) => {
+    let byPath = reads.get(resourceScope);
+    if (byPath === undefined) {
+      byPath = new Map();
+      reads.set(resourceScope, byPath);
+    }
+    let registration = byPath.get(path);
+    if (registration === undefined) {
+      registration = withProbeResourceScope(resourceScope, path, (probeScope) =>
+        read(path, { resourceScope: probeScope, signal: inspectionSignal }),
+      );
+      byPath.set(path, registration);
+    }
+    return registration;
+  };
+};
+
 /** Compose provider diagnostics at the outer CLI adapter boundary. */
 export const createSystemDoctorHost = (
   environment: Readonly<NodeJS.ProcessEnv> = process.env,
@@ -328,32 +371,10 @@ export const createSystemDoctorHost = (
   host: HostPlatform = HOST_PLATFORM,
 ): DoctorHost => {
   const { platform } = host;
-  const registrationReads = new WeakMap<
-    RetainedResourceScope,
-    Map<string, ReturnType<typeof readIdaConfiguration>>
-  >();
-  const readRegistration = (
-    path: string,
-    resourceScope: RetainedResourceScope,
-    inspectionSignal: AbortSignal,
-  ) => {
-    let byPath = registrationReads.get(resourceScope);
-    if (byPath === undefined) {
-      byPath = new Map();
-      registrationReads.set(resourceScope, byPath);
-    }
-    let registration = byPath.get(path);
-    if (registration === undefined) {
-      registration = withProbeResourceScope(resourceScope, path, (probeScope) =>
-        readIdaConfiguration(path, {
-          resourceScope: probeScope,
-          signal: inspectionSignal,
-        }),
-      );
-      byPath.set(path, registration);
-    }
-    return registration;
-  };
+  const readIdaRegistration = cachedRegistrationRead(readIdaConfiguration);
+  const readCutterRegistration = cachedRegistrationRead(
+    readCutterConfiguration,
+  );
   return systemDoctorHost({
     environment,
     platform,
@@ -365,20 +386,23 @@ export const createSystemDoctorHost = (
       resourceScope,
       inspectionSignal,
     ) => {
-      if (analysisProvider !== "ida" && analysisProvider !== "auto")
-        return ok(undefined);
-      const path = registrationEnvironment.REA_IDA_MCP_CONFIG;
-      if (path === undefined) return ok(undefined);
-      const registration = await readRegistration(
-        path,
-        resourceScope,
-        inspectionSignal,
-      );
-      if (registration.ok) return ok(registration.value.timeoutMs);
-      // An invalid IDA registration cannot be selected automatically. Keep it
-      // out of recommendations for another available provider, but surface the
-      // parser-owned error when IDA itself was explicitly selected.
-      return analysisProvider === "ida" ? registration : ok(undefined);
+      const budgets: number[] = [];
+      for (const [kind, setting, read] of [
+        ["ida", "REA_IDA_MCP_CONFIG", readIdaRegistration],
+        ["cutter", "REA_CUTTER_MCP_CONFIG", readCutterRegistration],
+      ] as const) {
+        if (analysisProvider !== kind && analysisProvider !== "auto") continue;
+        const path = registrationEnvironment[setting];
+        if (path === undefined) continue;
+        const registration = await read(path, resourceScope, inspectionSignal);
+        if (registration.ok) budgets.push(registration.value.timeoutMs);
+        // An invalid registration cannot be selected automatically. Keep it
+        // out of recommendations for another available provider, but surface
+        // the parser-owned error when that provider itself was explicitly
+        // selected.
+        else if (analysisProvider === kind) return registration;
+      }
+      return ok(budgets.length === 0 ? undefined : Math.max(...budgets));
     },
     providerInspections: async (
       resourceScope: RetainedResourceScope,
@@ -410,6 +434,12 @@ export const createSystemDoctorHost = (
       );
       const idaUnresolved = unresolvedProvider(
         "ida",
+        selected,
+        inspectionEnvironment,
+        platform,
+      );
+      const cutterUnresolved = unresolvedProvider(
+        "cutter",
         selected,
         inspectionEnvironment,
         platform,
@@ -448,12 +478,31 @@ export const createSystemDoctorHost = (
                 inspectionSignal,
                 inspectionEnvironment.REA_IDA_MCP_CONFIG === undefined
                   ? undefined
-                  : readRegistration(
+                  : readIdaRegistration(
                       inspectionEnvironment.REA_IDA_MCP_CONFIG,
                       resourceScope,
                       inspectionSignal,
                     ),
               ),
+            ),
+        cutterUnresolved !== undefined
+          ? Promise.resolve(cutterUnresolved)
+          : withProbeResourceScope(
+              resourceScope,
+              "cutter-doctor",
+              (probeScope) =>
+                inspectCutterRegistration(
+                  inspectionEnvironment.REA_CUTTER_MCP_CONFIG,
+                  probeScope,
+                  inspectionSignal,
+                  inspectionEnvironment.REA_CUTTER_MCP_CONFIG === undefined
+                    ? undefined
+                    : readCutterRegistration(
+                        inspectionEnvironment.REA_CUTTER_MCP_CONFIG,
+                        resourceScope,
+                        inspectionSignal,
+                      ),
+                ),
             ),
         jadxUnresolved !== undefined
           ? Promise.resolve(jadxUnresolved)
