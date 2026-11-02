@@ -248,7 +248,7 @@ dekhein. REA in dono providers ko install ya update nahi karta.
 Native formats aur host support har provider ke liye alag ho sakte hain.
 [Hopper aur Ghidra setup](../getting-started/installation.md#hopper),
 [IDA guide](../providers/ida-provider.md) (optional native MCP bridge samet),
-[Kuna decompiler guide](../kuna-provider.md) aur
+[Cutter](../providers/cutter-provider.md), [Kuna decompiler guide](../kuna-provider.md) aur
 [experimental Windows Ghidra support](../providers/windows-ghidra-p0.md) dekhein.
 Ghidra [16-bit DOS analysis](../providers/ghidra-dos.md) bhi support karta hai.
 Badi binaries ke liye `REA_GHIDRA_STARTUP_TIMEOUT_MS` ya

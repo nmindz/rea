@@ -261,7 +261,7 @@ GNU objdump и Rizin. Вижте
 Поддържаните нативни формати и операционни системи зависят от доставчика. Вижте
 [настройката на Hopper и Ghidra](../getting-started/installation.md#hopper),
 [ръководството за IDA](../providers/ida-provider.md) (включително незадължителен
-нативен MCP мост), [ръководството за декомпилатора Kuna](../kuna-provider.md) и
+нативен MCP мост), [Cutter](../providers/cutter-provider.md), [ръководството за декомпилатора Kuna](../kuna-provider.md) и
 [експерименталната поддръжка на Ghidra за Windows](../providers/windows-ghidra-p0.md).
 Ghidra поддържа и [анализ на 16-битов DOS код](../providers/ghidra-dos.md). За
 големи бинарни файлове увеличете времето за стартиране на доставчика с

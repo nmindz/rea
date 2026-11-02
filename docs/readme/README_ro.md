@@ -248,7 +248,7 @@ instalează și nu actualizează niciunul dintre aceste două instrumente.
 Formatele native și platformele acceptate diferă în funcție de motorul de analiză.
 Consultă [configurarea Hopper și Ghidra](../getting-started/installation.md#hopper),
 [ghidul IDA](../providers/ida-provider.md) (inclusiv o componentă opțională de legătură MCP nativă),
-[ghidul decompilatorului Kuna](../kuna-provider.md) și
+[Cutter](../providers/cutter-provider.md), [ghidul decompilatorului Kuna](../kuna-provider.md) și
 [suportul experimental Ghidra pe Windows](../providers/windows-ghidra-p0.md).
 Ghidra acceptă și [analiza DOS pe 16 biți](../providers/ghidra-dos.md).
 Pentru binare mari, mărește timpul maxim de pornire al motorului cu

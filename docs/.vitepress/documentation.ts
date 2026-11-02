@@ -344,6 +344,11 @@ export const documentationSections = [
         route: "/ida-provider",
       },
       {
+        text: "Cutter provider",
+        source: "providers/cutter-provider.md",
+        route: "/cutter-provider",
+      },
+      {
         text: "JEB instrumentation and analysis",
         source: "providers/jeb-analysis.md",
         route: "/jeb-analysis",
