@@ -306,7 +306,7 @@ from the environment that starts REA; changing that environment needs a restart.
 In MCP, `regex.matching_deadline_ms` overrides the deadline for newly accepted
 searches without restarting REA. A deadline failure names the effective
 milliseconds, known source, default, and maximum. The worker old-generation heap
-does not raise it. IDA and Kuna use these same regex controls; Ghidra's Java
+does not raise it. IDA, Cutter and Kuna use these same regex controls; Ghidra's Java
 matcher does not. The worker
 heap request is `REA_REGEX_WORKER_HEAP_REQUEST_MIB`, a decimal integer from
 7 to 16384 MiB. Unset uses 128 MiB. A request below 7 MiB aborts the worker

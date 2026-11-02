@@ -54,7 +54,7 @@ only setup-owned registrations use the guide's
 A plugin-only doctor result of `missing` does not call for `rea setup`.
 
 REA setup never installs or upgrades Node.js, npm, Homebrew, Java, Ghidra, IDA,
-JADX, Kuna, Binwalk, or Unblob. Use existing prerequisites; do not install unrelated
+Cutter, JADX, Kuna, Binwalk, or Unblob. Use existing prerequisites; do not install unrelated
 software to repair MCP registration. For an unsupported client, use manual stdio
 registration with an existing installation’s absolute runtime and entry script, or continue through the CLI.
 
@@ -347,6 +347,22 @@ Proceed directly to `analyze_function`, pseudocode, or function/string searches
 after opening; IDA does not supply `binary_overview`. Consult session availability
 when composing broader workflows. Modern direct callers and unsupported dossier
 facets remain unknown; live IDA results are not replayed from snapshots.
+
+With `REA_CUTTER_MCP_CONFIG` pointing at a CutterMCP+ stdio registration and the
+original input open in Cutter, `provider_id: "cutter"` answers procedure,
+string, name and section inventories, pseudocode, assembly, CALL-based
+callers/callees, exact-address xrefs, bytes and `analyze_function` from that live
+session. This is the provider, not the `cutter_command` bridge, which stays raw
+and does not answer these tools. The upstream carries no input digest, so REA
+binds the target by byte probes of its mapped code and the section layout and
+fails closed on a mismatch or when no file-backed code can be probed; this is
+weaker than IDA's digest check. Universal Mach-O needs a thin file. Only an
+allowlist of read tools is called and the project is never saved or closed.
+Pseudocode needs Cutter's Ghidra decompiler plugin and is `null` without it.
+Relationship coverage is always partial; locals, comments, typed references,
+CFG and referenced strings stay unknown; live results are not replayed from
+snapshots. See the
+[Cutter provider guide](https://github.com/morluto/rea/blob/main/docs/cutter-provider.md).
 
 With `REA_KUNA_COMMAND` configured, `provider_id: "kuna"` answers procedure
 lists, lookups, pseudocode, assembly and `analyze_function` from Kuna's cached

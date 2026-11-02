@@ -405,6 +405,18 @@ Exported C and embedded resources remain useful independent evidence, but a
 timeout does not establish complete analysis or absence of code. See the
 [deadline and client guide](https://github.com/morluto/rea/blob/main/docs/mcp-contracts.md#ghidra-first-query-deadlines-and-recovery).
 
+## Cutter provider and bridge
+
+`provider_id: "cutter"` (registration in `REA_CUTTER_MCP_CONFIG`) and
+`cutter_command` use different Cutter plugins. Select the provider for native
+analysis tools; use the bridge only when a raw Rizin command is the actual
+question, and treat it as unrestricted. The provider requires CutterMCP+ 0.4's
+read tool catalog and names missing tools in `details.diagnostics.missing_tools`.
+Target identity is probe-based (`identity_check` names the failed stage), so a
+refusal means Cutter has a different file, a patched mapping, or no comparable
+code open. An empty dossier facet is unknown, not absent. See the
+[Cutter provider guide](https://github.com/morluto/rea/blob/main/docs/cutter-provider.md).
+
 ## Bridge request ceiling
 
 Hopper and Cutter share `REA_BRIDGE_MAX_REQUEST_BYTES`. Unset, both sides use

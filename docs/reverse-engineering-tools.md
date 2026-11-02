@@ -93,6 +93,8 @@ Captured stdout and stderr are retained up to a 16 MiB combined limit; `output_t
 
 ## Cutter bridge
 
+This bridge sends raw Rizin commands (`cutter_command`) and is not a native analysis provider. To answer `analyze_function`, `list_procedures`, `procedure_pseudo_code`, xrefs, strings and segments from an open Cutter session, use the separate [Cutter provider](cutter-provider.md), which adapts CutterMCP+ through a fixed read-only tool allowlist and does not use this bridge.
+
 Cutter commands use the local REA Python bridge and authenticated loopback messages.
 Discovery reads the session descriptors that the plugin publishes in the bridge
 directory. Set `REA_CUTTER_BRIDGE_DIR` in both REA's environment and the environment
